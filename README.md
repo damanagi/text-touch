@@ -6,21 +6,26 @@
 
 ## 설치
 
-설치형 DMG: `~/Desktop/Text Touch-0.1.0-arm64.dmg`
+[GitHub Releases](https://github.com/damanagi/text-touch/releases/latest)에서 OS에 맞는 인스톨러를 다운로드하세요.
 
-### 1) DMG 더블클릭
+### macOS (Apple Silicon)
 
-Finder에서 DMG를 더블클릭 → 마운트 → 열린 창에서 **Text Touch.app 아이콘을 Applications 폴더로 드래그**.
+1. `Text Touch-0.1.0-arm64.dmg` 다운로드
+2. 더블클릭으로 마운트 → 열린 창에서 **Text Touch.app 아이콘을 Applications 폴더로 드래그**
+3. 첫 실행 시 macOS가 "확인되지 않은 개발자" 라고 막을 수 있어요. 터미널에서 한 번만:
 
-### 2) Gatekeeper 해제 (첫 실행 시)
+   ```bash
+   xattr -cr "/Applications/Text Touch.app"
+   ```
 
-코드 서명이 없어 macOS가 "손상되어 열 수 없음" 또는 "확인되지 않은 개발자" 라고 막을 수 있습니다. 터미널에서 한 번만:
+   또는 시스템 설정 → 개인정보 보호 및 보안 → 하단의 "확인 없이 열기" 클릭.
 
-```bash
-xattr -cr "/Applications/Text Touch.app"
-```
+### Windows (x64)
 
-또는 시스템 설정 → 개인정보 보호 및 보안 → 하단의 "확인 없이 열기" 클릭.
+1. `Text Touch-0.1.0-win-x64.exe` 다운로드
+2. 더블클릭 → 설치 마법사 진행 (설치 경로 변경 가능, 바탕화면·시작 메뉴 바로가기 자동 생성)
+3. 코드 서명이 없어 SmartScreen이 막으면 **"추가 정보" → "실행"** 클릭
+4. 시작 메뉴 또는 바탕화면에서 **Text Touch** 실행
 
 ### 3) 우클릭 메뉴 등록 (자동 인식 안 될 때)
 
@@ -85,7 +90,7 @@ mv my-slide.html.bak my-slide.html
 - **외부 자원**: HTML이 절대 경로로 외부 CSS/JS/이미지를 참조하면 미리보기에서 깨질 수 있습니다. 자족형(self-contained) 단일 HTML 파일에 최적화되어 있습니다.
 - **SVG 내부 텍스트**: 편집 비활성. SVG 안의 텍스트를 수정하려면 코드 에디터를 쓰세요.
 - **큰 파일**: 5만 노드 이상은 로딩이 느릴 수 있습니다.
-- **macOS 전용**: Windows/Linux 미지원. 우클릭 "다음으로 열기"는 macOS 기능.
+- **macOS / Windows 지원**: Linux 미지원. macOS는 우클릭 "다음으로 열기", Windows는 우클릭 "연결 프로그램"으로 등록됩니다.
 
 ## 디렉토리 구조
 

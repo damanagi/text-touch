@@ -1,7 +1,7 @@
 {
   "name": "text-touch",
   "version": "0.1.0",
-  "description": "로컬 HTML 파일의 텍스트만 인라인으로 편집하는 macOS 데스크탑 앱",
+  "description": "로컬 HTML 파일의 텍스트만 인라인으로 편집하는 데스크탑 앱 (macOS / Windows)",
   "main": "src/main.js",
   "author": "Kay",
   "license": "MIT",
@@ -9,7 +9,9 @@
     "start": "electron .",
     "dev": "electron . --dev",
     "build": "electron-builder --mac --arm64",
-    "build:dir": "electron-builder --mac --arm64 --dir"
+    "build:dir": "electron-builder --mac --arm64 --dir",
+    "build:win": "electron-builder --win --x64",
+    "build:all": "electron-builder --mac --arm64 --win --x64"
   },
   "devDependencies": {
     "electron": "^32.2.0",
@@ -21,6 +23,7 @@
     "files": [
       "src/**/*",
       "assets/icon.icns",
+      "assets/icon.ico",
       "package.json"
     ],
     "mac": {
@@ -49,6 +52,27 @@
         { "x": 410, "y": 200, "type": "link", "path": "/Applications" }
       ],
       "writeUpdateInfo": false
+    },
+    "win": {
+      "icon": "assets/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "artifactName": "${productName}-${version}-win-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Text Touch",
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico",
+      "deleteAppDataOnUninstall": false
     },
     "fileAssociations": [
       {
