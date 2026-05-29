@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval' data: blob: file: filesystem:; script-src * 'unsafe-inline' 'unsafe-eval' data: blob:; style-src * 'unsafe-inline' data: blob:; img-src * data: blob: file:; font-src * data: blob:; connect-src *;">
+  <title>Text Touch</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="toolbar">
+    <div class="toolbar-left">
+      <button id="btn-open" title="파일 열기 (⌘O)">📂 열기</button>
+      <span class="separator"></span>
+      <button id="btn-edit-toggle" title="편집 모드 토글 (⌘E)">✎ 편집 모드</button>
+      <button id="btn-undo" title="실행 취소 (⌘Z)" disabled>↶</button>
+      <button id="btn-redo" title="다시 하기 (⌘⇧Z)" disabled>↷</button>
+    </div>
+    <div class="toolbar-center">
+      <span id="file-info">파일을 열어주세요</span>
+    </div>
+    <div class="toolbar-right">
+      <button id="btn-save" title="저장 (⌘S)" disabled>💾 저장</button>
+      <button id="btn-save-as" title="다른 이름으로 저장 (⌘⇧S)" disabled>다른 이름으로 저장</button>
+    </div>
+  </div>
+
+  <div id="hint-bar">
+    <span id="hint-text"></span>
+  </div>
+
+  <div id="stage">
+    <div id="empty-state">
+      <div class="empty-icon">📄</div>
+      <div class="empty-title">HTML 파일을 여기로 드래그하거나</div>
+      <div class="empty-sub">상단 [열기] 버튼 또는 ⌘O 로 파일을 선택해주세요</div>
+      <div class="empty-meta">
+        Finder에서 .html 파일 우클릭 → "다음으로 열기" → Text Touch 도 됩니다
+      </div>
+    </div>
+    <iframe id="content-frame" hidden></iframe>
+  </div>
+
+  <div id="toast" hidden></div>
+
+  <script src="drag.js"></script>
+  <script src="editor.js"></script>
+</body>
+</html>

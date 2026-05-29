@@ -1,0 +1,66 @@
+{
+  "name": "text-touch",
+  "version": "0.1.0",
+  "description": "로컬 HTML 파일의 텍스트만 인라인으로 편집하는 macOS 데스크탑 앱",
+  "main": "src/main.js",
+  "author": "Kay",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder --mac --arm64",
+    "build:dir": "electron-builder --mac --arm64 --dir"
+  },
+  "devDependencies": {
+    "electron": "^32.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "kr.kay.texttouch",
+    "productName": "Text Touch",
+    "files": [
+      "src/**/*",
+      "assets/icon.icns",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "icon": "assets/icon.icns",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["arm64"]
+        }
+      ],
+      "identity": null,
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false
+    },
+    "dmg": {
+      "title": "Text Touch ${version}",
+      "icon": "assets/icon.icns",
+      "background": null,
+      "window": {
+        "width": 540,
+        "height": 380
+      },
+      "contents": [
+        { "x": 130, "y": 200, "type": "file" },
+        { "x": 410, "y": 200, "type": "link", "path": "/Applications" }
+      ],
+      "writeUpdateInfo": false
+    },
+    "fileAssociations": [
+      {
+        "ext": "html",
+        "name": "HTML Document",
+        "role": "Editor"
+      },
+      {
+        "ext": "htm",
+        "name": "HTML Document",
+        "role": "Editor"
+      }
+    ]
+  }
+}

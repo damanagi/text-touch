@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>htmledit 테스트 슬라이드</title>
+  <style>
+    body { margin: 0; font-family: -apple-system, 'Pretendard', sans-serif; background: #f4f4f6; }
+    .slide {
+      position: relative;
+      width: 1280px;
+      height: 720px;
+      background: linear-gradient(135deg, #ffffff 0%, #f0f0f5 100%);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+      margin: 40px auto;
+      overflow: hidden;
+    }
+    .title {
+      position: absolute;
+      left: 80px;
+      top: 80px;
+      font-size: 56px;
+      font-weight: 800;
+      color: #1c1c1e;
+      letter-spacing: -1px;
+    }
+    .sub {
+      position: absolute;
+      left: 80px;
+      top: 180px;
+      font-size: 22px;
+      color: #555;
+    }
+    .accent-bar {
+      position: absolute;
+      left: 80px;
+      top: 240px;
+      width: 60px;
+      height: 4px;
+      background: #0a84ff;
+    }
+    .item {
+      position: absolute;
+      left: 80px;
+      font-size: 22px;
+      color: #2c2c2e;
+      line-height: 1.5;
+    }
+    .item-1 { top: 320px; }
+    .item-2 { top: 380px; }
+    .item-3 { top: 440px; }
+    .footer {
+      position: absolute;
+      left: 80px;
+      bottom: 40px;
+      font-size: 14px;
+      color: #8e8e93;
+    }
+  </style>
+</head>
+<body>
+  <div class="slide">
+    <div class="title">슬라이드 제목입니다</div>
+    <div class="sub">부제 텍스트를 클릭해 수정해보세요</div>
+    <div class="accent-bar"></div>
+    <div class="item item-1">• 첫 번째 항목: Alt+드래그로 이동 가능</div>
+    <div class="item item-2">• 두 번째 항목: 클릭하면 텍스트 수정</div>
+    <div class="item item-3">• 세 번째 항목: ⌘S로 저장</div>
+    <div class="footer">© htmledit 테스트 슬라이드</div>
+  </div>
+</body>
+</html>
