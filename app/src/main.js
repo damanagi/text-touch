@@ -86,6 +86,8 @@ function createWindow() {
 // macOS: Finder에서 우클릭 → 다음으로 열기로 받은 파일
 app.on('open-file', (event, filePath) => {
   event.preventDefault();
+  // OS 최근 문서 등록 — macOS Dock·메뉴에 자동 노출 (다른 플랫폼은 silent noop)
+  try { app.addRecentDocument(filePath); } catch (_) { /* noop */ }
   if (mainWindow && !mainWindow.webContents.isLoading()) {
     mainWindow.webContents.send('open-file-from-os', filePath);
   } else {

@@ -21,6 +21,11 @@ contextBridge.exposeInMainWorld('htmledit', {
   setDirty: (dirty, fileName) =>
     ipcRenderer.send('win:setDirty', { dirty, fileName }),
 
+  // ─── v0.6 신규: 최근 파일 ───
+  addRecent: (path) => ipcRenderer.send('app:addRecent', { path }),
+  getRecent: () => ipcRenderer.invoke('app:getRecent'),
+  clearRecent: () => ipcRenderer.send('app:clearRecent'),
+
   // 드래그앤드롭으로 떨어진 File에서 절대 경로 추출
   getFilePath: (file) => {
     try {

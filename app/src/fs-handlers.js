@@ -114,11 +114,26 @@ function decodeBuffer({ buf, encoding, bom }) {
 // 줄바꿈 처리
 // ───────────────────────────────────────────
 
+// v0.6 변경: 전체 스캔(또는 3구간 샘플) 채택.
+// 이전 구현은 앞 2KB만 검사 → 머리는 LF, 꼬리는 CRLF 같은 혼합 파일에서
+// 꼬리쪽 CRLF가 통째로 LF로 변환되며 손실되는 H7 회귀를 일으켰다.
+// 전체 스캔 이유: tail-only CRLF 보존. (1MB 초과 시에만 3구간 샘플로 비용 절감.)
 function detectLineEnding(text) {
-  const sample = text.slice(0, 2048);
+  const len = text.length;
+  let sample;
+  if (len <= 1024 * 1024) {
+    // 1MB 이하: 전체 스캔
+    sample = text;
+  } else {
+    // 1MB 초과: 처음/중간/끝 16KB씩 3구간 샘플
+    const chunk = 16 * 1024;
+    const mid = Math.floor((len - chunk) / 2);
+    sample = text.slice(0, chunk) + text.slice(mid, mid + chunk) + text.slice(len - chunk);
+  }
   const crlfCount = (sample.match(/\r\n/g) || []).length;
   const lfCount = (sample.match(/(?<!\r)\n/g) || []).length;
-  if (crlfCount > 0 && crlfCount >= lfCount) return '\r\n';
+  // 동률 시 CRLF 우선 (Windows 호환성 보존; 이전 동작은 LF였음 → 변경)
+  if (crlfCount >= lfCount && crlfCount > 0) return '\r\n';
   return '\n';
 }
 
@@ -146,6 +161,7 @@ async function loadFile(filePath) {
 
   return {
     path: filePath,
+    dir: path.dirname(filePath),   // v0.6 신규: 사용자 HTML base 주입(#1) 용 — 원본 파일의 부모 디렉터리 절대 경로
     html: text,
     encoding,
     bom,

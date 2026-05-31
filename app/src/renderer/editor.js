@@ -11,6 +11,7 @@
   // ─── 상태 ──────────────────────────────────
   const state = {
     filePath: null,
+    dir: null,  // v0.6: 원본 파일의 부모 디렉터리 (base 주입용)
     encoding: 'utf-8',
     bom: false,
     lineEnding: '\n',
@@ -95,12 +96,33 @@
     dom.btnRedo.disabled = state.redoStack.length === 0;
   }
 
+  // v0.6: 사용자 HTML의 상대 경로 자원(./images/foo.png 등) 로드를 위해 <base> 태그 주입
+  function injectBase(htmlString, baseDir) {
+    if (!baseDir || /<base\b/i.test(htmlString)) return htmlString;
+    // file:// URL 인코딩 (공백 + 한글 처리)
+    const parts = baseDir.split('/').map(p => encodeURIComponent(p));
+    const fileUrl = 'file://' + parts.join('/') + '/';
+    const baseTag = `<base href="${fileUrl}" data-htmledit-injected="base">`;
+    if (/<head\b[^>]*>/i.test(htmlString)) {
+      return htmlString.replace(/<head\b[^>]*>/i, m => m + baseTag);
+    }
+    if (/<html\b[^>]*>/i.test(htmlString)) {
+      return htmlString.replace(/<html\b[^>]*>/i, m => m + '<head>' + baseTag + '</head>');
+    }
+    return '<!DOCTYPE html><head>' + baseTag + '</head>' + htmlString;
+  }
+
   // ─── iframe 마운트 ──────────────────────────
   function mountDocument(htmlString) {
     return new Promise((resolve, reject) => {
       const iframe = dom.contentFrame;
       // 보안 HIGH H1: sandbox 적용 (allow-same-origin은 contentEditable·드래그 등 동작에 필요)
       iframe.setAttribute('sandbox', 'allow-same-origin allow-scripts allow-forms allow-popups');
+
+      // v0.6: 이미지 alt 패널은 새 문서 마운트 직전에 닫는다 (stale 참조 회피)
+      if (window.htmleditAltPanel && window.htmleditAltPanel.isOpen && window.htmleditAltPanel.isOpen()) {
+        window.htmleditAltPanel.close();
+      }
 
       const onLoad = () => {
         iframe.removeEventListener('load', onLoad);
@@ -126,8 +148,10 @@
         }
       };
       iframe.addEventListener('load', onLoad);
+      // v0.6: 사용자 HTML 상대 경로 자원 로드를 위한 <base> 주입
+      const finalHtml = injectBase(htmlString, state.dir);
       // srcdoc은 새 HTML을 통째로 iframe에 로드. 이전 문서는 자동으로 해제됨.
-      iframe.srcdoc = htmlString;
+      iframe.srcdoc = finalHtml;
     });
   }
 
@@ -240,6 +264,10 @@ mark.htmledit-find-current {
     // 편집 보조 스타일은 저장에서 제외
     const injected = doc.getElementById('texttouch-injected-style');
     if (injected) injected.remove();
+
+    // v0.6: 우리가 주입한 <base data-htmledit-injected="base">는 저장에서 제외
+    const injectedBase = doc.querySelector('base[data-htmledit-injected="base"]');
+    if (injectedBase) injectedBase.remove();
 
     // v0.5: find-replace 하이라이트 청소 (contracts §7)
     if (window.htmleditFindReplace && typeof window.htmleditFindReplace.clearHighlights === 'function') {
@@ -498,6 +526,8 @@ mark.htmledit-find-current {
 
     try {
       state.filePath = payload.path;
+      // v0.6: 디렉터리는 base 주입에 사용 — fs-handlers가 안 보내면 path에서 파생
+      state.dir = payload.dir || (payload.path ? payload.path.replace(/[^/]+$/, '').replace(/\/$/, '') : null);
       state.encoding = payload.encoding || 'utf-8';
       state.bom = !!payload.bom;
       state.lineEnding = payload.lineEnding || '\n';
@@ -511,6 +541,11 @@ mark.htmledit-find-current {
 
       const doc = await mountDocument(payload.html);
       state.iframeDoc = doc;
+
+      // v0.6: OS 최근 문서에 등록
+      if (window.htmledit && typeof window.htmledit.addRecent === 'function') {
+        window.htmledit.addRecent(payload.path);
+      }
 
       updateFileInfo();
       updateButtons();
@@ -921,6 +956,18 @@ mark.htmledit-find-current {
       return;
     }
 
+    // v0.6: 이미지 alt 패널 토글
+    if (action === 'toggleAltPanel') {
+      if (!state.iframeDoc) {
+        showToast('파일을 먼저 열어주세요.', 'error');
+        return;
+      }
+      if (window.htmleditAltPanel && typeof window.htmleditAltPanel.toggle === 'function') {
+        window.htmleditAltPanel.toggle();
+      }
+      return;
+    }
+
     if (typeof action === 'string' && action.startsWith('format:')) {
       const cmd = action.slice(7);
       const doc = state.iframeDoc;
@@ -990,6 +1037,13 @@ mark.htmledit-find-current {
     }
     if (window.htmleditFindReplace && typeof window.htmleditFindReplace.init === 'function') {
       window.htmleditFindReplace.init(document.body, () => state.iframeDoc);
+    }
+
+    // v0.6: 이미지 alt 패널 초기화
+    if (window.htmleditAltPanel && typeof window.htmleditAltPanel.init === 'function') {
+      window.htmleditAltPanel.init(document.body, () => state.iframeDoc, {
+        onChange: () => markDirty()
+      });
     }
 
     dom.btnOpen.addEventListener('click', triggerOpen);

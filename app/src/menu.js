@@ -48,6 +48,17 @@ function buildMenu(getWindow) {
         },
         { type: 'separator' },
         {
+          // macOS NSDocumentController가 자동 관리하는 최근 문서 목록.
+          // app.addRecentDocument(path) 호출이 트리거. clearRecentDocuments role로 초기화.
+          label: '최근 파일',
+          submenu: [
+            { role: 'recentDocuments' },
+            { type: 'separator' },
+            { role: 'clearRecentDocuments', label: '최근 파일 비우기' }
+          ]
+        },
+        { type: 'separator' },
+        {
           label: '백업으로 되돌리기...',
           click: sendAction('restoreBackup')
         },
@@ -132,7 +143,13 @@ function buildMenu(getWindow) {
         { role: 'zoomIn', label: '확대' },
         { role: 'zoomOut', label: '축소' },
         { type: 'separator' },
-        { role: 'togglefullscreen', label: '전체 화면' }
+        { role: 'togglefullscreen', label: '전체 화면' },
+        { type: 'separator' },
+        {
+          label: '이미지 alt 편집',
+          accelerator: 'CmdOrCtrl+Shift+A',
+          click: sendAction('toggleAltPanel')
+        }
       ]
     },
     {

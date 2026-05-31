@@ -1,5 +1,15 @@
-const { dialog, shell } = require('electron');
+const { app, dialog, shell } = require('electron');
+const fs = require('fs').promises;
+const path = require('path');
+const os = require('os');
 const fsHandlers = require('./fs-handlers');
+
+// 자체 보관 recent.json 경로 — TEXTTOUCH_USER_DATA_DIR가 우선, 없으면 기본 macOS 경로
+function getRecentFilePath() {
+  const dir = process.env.TEXTTOUCH_USER_DATA_DIR
+    || path.join(os.homedir(), 'Library', 'Application Support', 'Text Touch');
+  return { dir, file: path.join(dir, 'recent.json') };
+}
 
 // ───────────────────────────────────────────
 // Dirty 상태 — 렌더러가 win:setDirty로 주기적으로 알려줌.
@@ -124,6 +134,51 @@ function registerIpcHandlers(ipcMain, getMainWindow) {
     const { dirty, fileName } = payload || {};
     const w = getMainWindow();
     return await showSaveConfirmDialog(w, !!dirty, fileName);
+  });
+
+  // ─── v0.6 신규: 최근 파일 관리 ───
+  // OS API + 자체 보관(recent.json, 최근 10개)를 함께 갱신.
+  // OS 관리(NSDocumentController)는 macOS 메뉴/Dock에 자동 노출되지만 우리는
+  // 직접 읽을 수 없어, 렌더러가 쿼리할 수 있는 fallback으로 자체 JSON을 둔다.
+  ipcMain.on('app:addRecent', async (_event, payload) => {
+    const { path: filePath } = payload || {};
+    if (!filePath) return;
+    try { app.addRecentDocument(filePath); } catch (_) { /* noop */ }
+
+    const { dir, file } = getRecentFilePath();
+    let list = [];
+    try {
+      const raw = await fs.readFile(file, 'utf-8');
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) list = parsed;
+    } catch (_) { /* 파일 없거나 깨졌으면 빈 리스트 */ }
+
+    // 중복 제거 후 맨 앞에 prepend, 최대 10개
+    list = list.filter((x) => x && x.path !== filePath);
+    list.unshift({ path: filePath, name: path.basename(filePath) });
+    list = list.slice(0, 10);
+
+    try {
+      await fs.mkdir(dir, { recursive: true });
+      await fs.writeFile(file, JSON.stringify(list, null, 2), 'utf-8');
+    } catch (_) { /* 디스크 실패는 silent */ }
+  });
+
+  ipcMain.handle('app:getRecent', async () => {
+    const { file } = getRecentFilePath();
+    try {
+      const raw = await fs.readFile(file, 'utf-8');
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr.slice(0, 10) : [];
+    } catch (_) {
+      return [];
+    }
+  });
+
+  ipcMain.on('app:clearRecent', () => {
+    try { app.clearRecentDocuments(); } catch (_) { /* noop */ }
+    const { file } = getRecentFilePath();
+    fs.unlink(file).catch(() => { /* 없으면 무시 */ });
   });
 }
 

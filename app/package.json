@@ -1,6 +1,6 @@
 {
   "name": "text-touch",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "로컬 HTML 파일의 텍스트만 인라인으로 편집하는 데스크탑 앱 (macOS / Windows)",
   "main": "src/main.js",
   "author": "Kay",

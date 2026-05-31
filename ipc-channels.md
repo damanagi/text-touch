@@ -44,6 +44,21 @@
 - **사용:** 렌더러가 dirty 상태일 때 close/open 시 메인 모달을 호출
 - **구현:** `dialog.showMessageBox` 3-way
 
+### `app:addRecent` (v0.6 신규)
+- **요청 페이로드:** `{ path: string }`
+- **응답:** (없음, send)
+- **구현:** `app.addRecentDocument(path)` 호출. macOS Dock·메뉴 자동 등록.
+
+### `app:getRecent` (v0.6 신규)
+- **요청 페이로드:** 없음
+- **응답:** `[{ path: string, name: string }]` — 최근 10개
+- **구현:** Electron 내장 최근 문서 API + 자체 보관 병용
+
+### `app:clearRecent` (v0.6 신규)
+- **요청 페이로드:** 없음
+- **응답:** (없음, send)
+- **구현:** `app.clearRecentDocuments()`
+
 ## Main → Renderer (webContents.send)
 
 ### `open-file-from-os`
@@ -56,6 +71,7 @@
 - **페이로드:** `action: string` — 다음 값 중 하나:
   - 기존: `'open' | 'save' | 'saveAs' | 'toggleEdit'`
   - v0.5 신규: `'restoreBackup' | 'revealInFinder' | 'find' | 'findNext' | 'findPrev' | 'replace' | 'format:bold' | 'format:italic' | 'format:underline' | 'format:strikethrough' | 'format:superscript' | 'format:subscript' | 'format:alignLeft' | 'format:alignCenter' | 'format:alignRight' | 'format:alignJustify' | 'format:insertUnorderedList' | 'format:insertOrderedList' | 'format:indent' | 'format:outdent' | 'format:removeFormat'`
+  - v0.6 신규: `'toggleAltPanel'`
 - **트리거:** 앱 메뉴의 항목 클릭
 
 ## 명세 변경 정책
