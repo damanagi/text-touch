@@ -1,8 +1,8 @@
 # Text Touch
 
-로컬 HTML 파일의 **텍스트만 그 자리에서 수정**하는 데스크탑 앱 (macOS · Windows).
+로컬 HTML 파일을 **PowerPoint처럼 인라인으로 편집**하는 데스크탑 앱 (macOS · Windows).
 
-> 디자인·CSS·스크립트는 한 픽셀도 흔들지 않고, 텍스트와 (슬라이드형 HTML의) 텍스트 상자 위치만 인라인으로 편집합니다. 원본 자리에 저장하거나 다른 이름으로 저장할 수 있고, 저장 전 자동으로 `.bak` 백업을 만듭니다.
+> 디자인·구조는 그대로 두고 텍스트와 서식만 그 자리에서 수정합니다. 원본 자리에 안전하게 저장하고, 자동 백업으로 실수도 되돌릴 수 있습니다. LLM이 만든 HTML 슬라이드·리포트·아티팩트를 코드 에디터 켜지 않고 빠르게 다듬을 때 가장 잘 맞습니다.
 
 ## 설치
 
@@ -10,7 +10,7 @@
 
 ### macOS (Apple Silicon)
 
-1. `Text Touch-0.1.0-arm64.dmg` 다운로드
+1. `Text Touch-0.5.0-arm64.dmg` 다운로드
 2. 더블클릭으로 마운트 → 열린 창에서 **Text Touch.app 아이콘을 Applications 폴더로 드래그**
 3. 첫 실행 시 macOS가 "확인되지 않은 개발자" 라고 막을 수 있어요. 터미널에서 한 번만:
 
@@ -22,120 +22,136 @@
 
 ### Windows (x64)
 
-1. `Text Touch-0.1.0-win-x64.exe` 다운로드
+1. `Text Touch-0.5.0-win-x64.exe` 다운로드
 2. 더블클릭 → 설치 마법사 진행 (설치 경로 변경 가능, 바탕화면·시작 메뉴 바로가기 자동 생성)
 3. 코드 서명이 없어 SmartScreen이 막으면 **"추가 정보" → "실행"** 클릭
 4. 시작 메뉴 또는 바탕화면에서 **Text Touch** 실행
-
-### 3) 우클릭 메뉴 등록 (자동 인식 안 될 때)
-
-```bash
-/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/Support/lsregister -kill -r -domain local -domain system -domain user
-killall Finder
-```
 
 ## 사용법
 
 ### 파일 열기 3가지 방법
 
-1. 앱을 더블클릭 → 빈 화면에서 ⌘O 또는 [열기] 버튼
-2. **HTML 파일을 앱 창으로 드래그앤드롭**
-3. **Finder에서 .html 우클릭 → "다음으로 열기" → Text Touch**
+1. 앱 메뉴 (⌘O)
+2. 창에 HTML 파일 **드래그앤드롭**
+3. **Finder에서 .html 우클릭** → "다음으로 열기" → Text Touch
 
-### 편집
+### PowerPoint 스타일 서식 툴바
 
-| 단축키 | 동작 |
-|--------|------|
-| ⌘E | 편집 모드 ON/OFF |
-| 텍스트 클릭 | 그 자리에서 수정 |
-| Alt + 드래그 | 슬라이드형 HTML에서 텍스트 상자 이동 |
-| Enter | 줄바꿈 (`<br>`) |
+편집 모드(⌘⇧E)를 켜면 상단 리본에 **글꼴**과 **단락** 그룹이 활성화됩니다.
+
+- **글꼴**: 글꼴 패밀리 / 크기 / **B I U S** / 위·아래 첨자 / 글자 색 / 형광펜
+- **단락**: 글머리 기호 / 번호 매기기 / 내어쓰기 / 들여쓰기 / 정렬 4종 / 서식 지우기
+
+텍스트를 드래그 선택하면 그 자리에 **부동 미니 툴바**가 함께 표시됩니다.
+
+### 단축키 (Word / PowerPoint 표준)
+
+| 키 | 동작 |
+|----|------|
+| ⌘O / ⌘S / ⌘⇧S | 열기 / 저장 / 다른 이름으로 저장 |
 | ⌘Z / ⌘⇧Z | 실행 취소 / 다시 하기 |
-| ⌘C / ⌘V | 복사 / 붙여넣기 (서식 제거) |
-| ⌘S | 저장 (원본 덮어쓰기, `.bak` 자동 생성) |
-| ⌘⇧S | 다른 이름으로 저장 |
+| ⌘⇧E | 편집 모드 켜기/끄기 |
+| ⌘F / ⌘⇧H / ⌘G / ⌘⇧G | 찾기 / 바꾸기 / 다음 / 이전 |
+| ⌘B / ⌘I / ⌘U / ⌘⇧X | 굵게 / 기울임 / 밑줄 / 취소선 |
+| ⌘⇧= / ⌘= | 위 첨자 / 아래 첨자 |
+| ⌘L / ⌘E / ⌘R / ⌘J | 왼쪽 / 가운데 / 오른쪽 / 양쪽 정렬 |
+| ⌘] / ⌘[ | 들여쓰기 / 내어쓰기 |
+| ⌘\\ | 서식 지우기 |
+| ⌘⇧> / ⌘⇧< | 폰트 크기 단계 키우기 / 작게 |
+| Alt + 드래그 | 슬라이드형 HTML에서 텍스트 박스 이동 |
 
 ### 슬라이드형 vs 일반 본문 — 드래그 이동 정책
 
-텍스트 박스 위치 이동(Alt+드래그)은 텍스트 박스 **자체가 `position: absolute` 또는 `fixed`로 자유 좌표에 배치된 경우에만** 활성화됩니다. 슬라이드 HTML은 두 종류로 나뉘는데, 동작이 다릅니다.
+텍스트 박스 위치 이동(Alt+드래그)은 텍스트 박스 **자체가 `position: absolute` 또는 `fixed`로 자유 좌표에 배치된 경우에만** 활성화됩니다.
 
 | 유형 | 예시 | 텍스트 이동 |
 |------|------|------|
-| **A. PPT 변환 스타일** | PowerPoint→HTML, Marp, 일부 단일 페이지 슬라이드 | ✅ 가능 — 텍스트 박스가 자유 좌표 |
-| **B. reveal.js 스타일** | make-slide, reveal.js, slidev | ❌ 불가 — 텍스트가 flex/grid 자식이라 좌표 개념 없음 |
-| **일반 본문** | 블로그, 리포트 | ❌ 불가 — reflow 레이아웃 |
+| **PPT 변환 스타일** | PowerPoint → HTML, Marp 등 | ✅ 가능 |
+| **reveal.js 스타일** | make-slide, reveal.js, slidev | ❌ 불가 |
+| **일반 본문** | 블로그, 리포트 | ❌ 불가 |
 
-A·B 모두 **텍스트 편집(클릭→수정)과 페이지 전환(키보드)은 정상 동작**합니다. 이 정책은 "옮긴 결과가 디자인을 안전하게 보존해야 한다"는 원칙에서 나온 것입니다. B 타입 슬라이드에서 텍스트를 강제로 옮기면 다음 페이지 전환 시 위치가 초기화되거나 다른 요소와 겹칠 수 있어 의도적으로 비활성화했습니다.
+세 유형 모두 **텍스트 편집·서식·페이지 전환(키보드)은 정상 동작**합니다.
 
-## 백업
+## 자동 백업
 
-저장할 때마다 자동으로 백업이 만들어집니다. 같은 폴더에:
+저장할 때마다 자동으로 백업이 만들어집니다. 사용자 폴더는 깔끔하게 유지되도록 **시스템 위치**에 저장됩니다.
 
 ```
-my-slide.html        ← 현재
-my-slide.html.bak    ← 가장 최근 백업 (저장 직전)
-my-slide.html.bak.1  ← 한 번 전
-my-slide.html.bak.2  ← 두 번 전
+~/Library/Application Support/Text Touch/backups/
+└── {파일별 해시 폴더}/
+    ├── original.txt        ← 원본 절대 경로 기록 (복원 검증용)
+    ├── 20260531-2310.html  ← 최근 5개 유지, 가장 오래된 것부터 회전
+    ├── 20260531-2305.html
+    └── ...
 ```
 
-복구하려면:
+복구는 **파일 → 백업으로 되돌리기...** 메뉴에서. 시각, 파일 크기를 보고 선택하면 현재 작업 위에 복원됩니다.
 
-```bash
-mv my-slide.html.bak my-slide.html
-```
+## 데이터 안전 (v0.5)
+
+- **저장하지 않은 변경 가드**: ⌘Q · ⌘W · 다른 파일 열기 시 3-way 확인 모달 (저장 / 저장 안 함 / 취소)
+- **인코딩 라운드트립**: UTF-8 / UTF-16 / EUC-KR / CP949 / Shift_JIS 등 비표준 인코딩도 `iconv-lite`로 정확히 보존
+- **원자적 쓰기**: temp → rename 패턴으로 도중 중단되어도 원본 무사
+- **백업 atomic 회전**: 부분 실패 시 정상 백업 슬롯이 손상되지 않도록 tmp → rename 패턴
 
 ## 알려진 한계
 
-- **인코딩**: UTF-8과 UTF-16만 안전 지원. EUC-KR 등은 UTF-8로 변환되어 저장됩니다 (원본은 `.bak`에 안전).
-- **외부 자원**: HTML이 절대 경로로 외부 CSS/JS/이미지를 참조하면 미리보기에서 깨질 수 있습니다. 자족형(self-contained) 단일 HTML 파일에 최적화되어 있습니다.
-- **SVG 내부 텍스트**: 편집 비활성. SVG 안의 텍스트를 수정하려면 코드 에디터를 쓰세요.
-- **큰 파일**: 5만 노드 이상은 로딩이 느릴 수 있습니다.
 - **macOS / Windows 지원**: Linux 미지원. macOS는 우클릭 "다음으로 열기", Windows는 우클릭 "연결 프로그램"으로 등록됩니다.
+- **첨부 텍스트 서식**만: 이미지·표 삽입, 페이지 레이아웃 변경은 지원하지 않습니다. 도구의 정체성은 *이미 만들어진 디자인의 텍스트와 서식을 다듬는 것*입니다.
+- **코드 서명 없음**: 첫 실행 시 Gatekeeper / SmartScreen 우회 절차 필요 (설치 안내 참조).
 
 ## 디렉토리 구조
 
 ```
-~/_workspace/Text Touch/
-├── app/                ← Electron 앱 코드
+~/_workspace/htmledit/
+├── app/                    ← Electron 앱 소스
 │   ├── package.json
 │   ├── src/
-│   │   ├── main.js
+│   │   ├── main.js         ← 메인 프로세스 + dirty 가드
 │   │   ├── preload.js
-│   │   ├── menu.js
-│   │   ├── ipc.js
-│   │   ├── fs-handlers.js
+│   │   ├── menu.js         ← 파일·편집·서식·보기·윈도우 메뉴
+│   │   ├── ipc.js          ← 8개 IPC 채널
+│   │   ├── fs-handlers.js  ← iconv-lite·atomic·백업 회전
 │   │   └── renderer/
 │   │       ├── index.html
-│   │       ├── editor.js
+│   │       ├── editor.js   ← 컨트롤러 (dirty·undo·iframe wire-up)
 │   │       ├── drag.js
+│   │       ├── text-format.js    ← 서식 + 단축키 (v0.5 신규)
+│   │       ├── find-replace.js   ← 찾기·바꾸기 바 (v0.5 신규)
+│   │       ├── mini-toolbar.js   ← 부동 미니 툴바 (v0.5 신규)
 │   │       └── styles.css
 │   ├── assets/
+│   │   ├── icon.icns / icon.ico
 │   │   ├── test-slide.html
 │   │   └── test-prose.html
-│   └── dist/           ← 빌드 산출물
+│   └── dist/               ← 빌드 산출물
 ├── .claude/
-│   ├── agents/         ← 하네스 에이전트 정의
-│   └── skills/         ← 하네스 스킬 (재빌드 시 참조)
-├── ipc-channels.md     ← IPC 명세 단일 진실 원천
-└── README.md           ← 이 문서
+│   ├── agents/             ← 8명 에이전트 (빌드 4 + 검토 4 + 서식 1)
+│   └── skills/             ← 오케스트레이터 스킬
+├── contracts/
+│   └── v0.5-api.md         ← 5명 병렬 작업 단일 진실 원천
+├── ipc-channels.md         ← IPC 명세
+├── REVIEW.md               ← v0.1.0 다각도 검토 보고서
+└── README.md               ← 이 문서
 ```
 
 ## 재빌드
 
-코드를 수정한 뒤:
-
 ```bash
-cd ~/_workspace/Text Touch/app
-npm run build
-cp -R dist/mac-arm64/Text Touch.app /Applications/
-xattr -cr /Applications/Text Touch.app
+cd ~/_workspace/htmledit/app
+npm install
+npm run build         # macOS DMG
+npm run build:win     # Windows EXE
+npm run build:dir     # .app만 (DMG 없이)
 ```
+
+Node.js 22+ 권장.
 
 ## 개발 모드
 
 `npm run dev` 로 실행하면 DevTools가 함께 열립니다.
 
 ```bash
-cd ~/_workspace/Text Touch/app
+cd ~/_workspace/htmledit/app
 npm run dev
 ```

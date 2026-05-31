@@ -1,7 +1,9 @@
-// Text Touch 렌더러 (iframe 격리 버전)
+// Text Touch 렌더러 (iframe 격리 버전) — v0.5
 // - 사용자 HTML은 iframe.srcdoc으로 마운트되어 CSS/JS/viewport가 완전 격리
 // - 셸의 toolbar/hint-bar는 사용자 CSS의 영향을 받지 않음
 // - contentEditable/드래그/단축키는 iframe.contentDocument 안에서 동작
+// - v0.5: text-format/find-replace/mini-toolbar 모듈 wire-up,
+//   dirty 가드, ⌘E → ⌘⇧E 단축키 이동, iframe sandbox, 백업 복원 모달.
 
 (function () {
   'use strict';
@@ -19,6 +21,9 @@
     redoStack: [],
     isApplyingHistory: false
   };
+
+  // H10: 저장 in-flight 가드 (중복 save 방지)
+  let saving = false;
 
   const MAX_HISTORY = 300;
 
@@ -41,7 +46,11 @@
     hintText: document.getElementById('hint-text'),
     emptyState: document.getElementById('empty-state'),
     contentFrame: document.getElementById('content-frame'),
-    toast: document.getElementById('toast')
+    toast: document.getElementById('toast'),
+    formatBar: document.getElementById('format-bar'),
+    restoreModal: document.getElementById('restore-modal'),
+    restoreList: document.getElementById('restore-list'),
+    restoreCancel: document.getElementById('restore-cancel')
   };
 
   // ─── 토스트 ────────────────────────────────
@@ -90,6 +99,9 @@
   function mountDocument(htmlString) {
     return new Promise((resolve, reject) => {
       const iframe = dom.contentFrame;
+      // 보안 HIGH H1: sandbox 적용 (allow-same-origin은 contentEditable·드래그 등 동작에 필요)
+      iframe.setAttribute('sandbox', 'allow-same-origin allow-scripts allow-forms allow-popups');
+
       const onLoad = () => {
         iframe.removeEventListener('load', onLoad);
         try {
@@ -97,6 +109,17 @@
           if (!doc) throw new Error('iframe document에 접근할 수 없어요.');
           injectEditorStyles(doc);
           bindIframeKeyboard(doc);
+
+          // v0.5 신규: text-format 모듈 단축키 등록
+          if (window.htmleditFormat && typeof window.htmleditFormat.bindKeyboard === 'function') {
+            window.htmleditFormat.bindKeyboard(doc, {
+              onCommandApplied: () => markDirty()
+            });
+          }
+
+          // v0.5 신규: 선택 변경 감지 → 미니 툴바
+          bindSelectionChange(doc);
+
           resolve(doc);
         } catch (e) {
           reject(e);
@@ -108,7 +131,7 @@
     });
   }
 
-  // iframe 안에 편집 보조 스타일 주입 (호버/포커스 표시, 드래그 커서 등)
+  // ─── iframe 안 편집 보조 스타일 주입 (호버/포커스 표시, 드래그 커서, Alt 시각 신호 등)
   function injectEditorStyles(doc) {
     if (doc.getElementById('texttouch-injected-style')) return;
     const style = doc.createElement('style');
@@ -123,9 +146,11 @@
   outline-color: rgba(10, 132, 255, 0.55);
   cursor: text;
 }
+/* UX HIGH H6: 키보드 포커스 강화 */
 .htmledit-mode-on .htmledit-editable:focus {
-  outline: 2px solid rgba(10, 132, 255, 0.85);
+  outline: 2px solid #0a84ff;
   outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(255,255,255,0.4);
 }
 .htmledit-mode-on .htmledit-movable {
   cursor: grab;
@@ -137,6 +162,12 @@ body.htmledit-dragging,
 body.htmledit-dragging * {
   cursor: grabbing !important;
   user-select: none !important;
+}
+/* UX HIGH H5: Alt 키 눌리면 movable 상자 시각 신호 */
+body.htmledit-alt-pressed .htmledit-movable {
+  cursor: grab;
+  outline: 2px solid rgba(255, 159, 10, 0.7);
+  outline-offset: 3px;
 }
 .htmledit-changed {
   position: relative;
@@ -153,8 +184,52 @@ body.htmledit-dragging * {
   pointer-events: none;
   z-index: 99999;
 }
+/* find-replace 하이라이트 */
+mark.htmledit-find-highlight {
+  background: rgba(255, 245, 157, 0.7);
+  color: #1c1c1e;
+  border-radius: 2px;
+}
+mark.htmledit-find-current {
+  background: rgba(255, 159, 10, 0.85);
+  color: #1c1c1e;
+  outline: 1px solid rgba(255, 159, 10, 1);
+}
 `;
     (doc.head || doc.documentElement).appendChild(style);
+  }
+
+  // ─── 선택 변경 → 미니 툴바 위치/상태 갱신 ───
+  function bindSelectionChange(doc) {
+    doc.addEventListener('selectionchange', () => {
+      try {
+        const sel = doc.getSelection();
+        const miniToolbar = window.htmleditMiniToolbar;
+        if (!miniToolbar) return;
+
+        if (sel && !sel.isCollapsed && state.editMode && sel.rangeCount > 0) {
+          const range = sel.getRangeAt(0);
+          const rect = range.getBoundingClientRect();
+          const iframe = dom.contentFrame;
+          const iframeRect = iframe.getBoundingClientRect();
+          // iframe 내부 좌표 → 셸 좌표로 변환
+          const shellRect = new DOMRect(
+            rect.left + iframeRect.left,
+            rect.top + iframeRect.top,
+            rect.width,
+            rect.height
+          );
+          miniToolbar.show(shellRect);
+          if (window.htmleditFormat) {
+            miniToolbar.update(window.htmleditFormat.getActiveFormats(doc));
+          }
+        } else {
+          miniToolbar.hide();
+        }
+      } catch (e) {
+        console.warn('[editor] selectionchange 처리 실패:', e);
+      }
+    });
   }
 
   // ─── 직렬화 ────────────────────────────────
@@ -166,23 +241,40 @@ body.htmledit-dragging * {
     const injected = doc.getElementById('texttouch-injected-style');
     if (injected) injected.remove();
 
-    // 편집/이동 표식 클래스 제거 (이건 저장 시 빠져야)
+    // v0.5: find-replace 하이라이트 청소 (contracts §7)
+    if (window.htmleditFindReplace && typeof window.htmleditFindReplace.clearHighlights === 'function') {
+      try { window.htmleditFindReplace.clearHighlights(); } catch (_) { /* ignore */ }
+    }
+    // 안전망: 남은 mark.htmledit-find-highlight/current를 직접 unwrap
+    const findMarks = doc.querySelectorAll('mark.htmledit-find-highlight, mark.htmledit-find-current, .htmledit-find-highlight, .htmledit-find-current');
+    findMarks.forEach(m => {
+      const parent = m.parentNode;
+      if (!parent) return;
+      while (m.firstChild) parent.insertBefore(m.firstChild, m);
+      parent.removeChild(m);
+      parent.normalize();
+    });
+
+    // 편집/이동 표식 클래스 제거 (저장 시 빠져야)
     const cleanups = doc.querySelectorAll(
-      '.htmledit-editable, .htmledit-movable, .htmledit-changed, .htmledit-mode-on'
+      '.htmledit-editable, .htmledit-movable, .htmledit-changed, .htmledit-mode-on, .htmledit-alt-pressed'
     );
     cleanups.forEach(el => {
-      el.classList.remove('htmledit-editable', 'htmledit-movable', 'htmledit-changed', 'htmledit-mode-on');
+      el.classList.remove(
+        'htmledit-editable', 'htmledit-movable', 'htmledit-changed',
+        'htmledit-mode-on', 'htmledit-alt-pressed'
+      );
       el.removeAttribute('contenteditable');
       if (el.dataset.htmleditDragBound) delete el.dataset.htmleditDragBound;
     });
-    doc.body.classList.remove('htmledit-mode-on', 'htmledit-dragging');
+    doc.body.classList.remove('htmledit-mode-on', 'htmledit-dragging', 'htmledit-alt-pressed');
 
     const doctype = doc.doctype
       ? `<!DOCTYPE ${doc.doctype.name}${doc.doctype.publicId ? ' PUBLIC "' + doc.doctype.publicId + '"' : ''}${doc.doctype.systemId ? ' "' + doc.doctype.systemId + '"' : ''}>\n`
       : '<!DOCTYPE html>\n';
     const html = doctype + doc.documentElement.outerHTML;
 
-    // 직렬화 후 다시 보조 스타일 복원 (편집 모드 유지를 위해)
+    // 직렬화 후 다시 보조 스타일 복원 (편집 모드 유지)
     if (injected) injectEditorStyles(doc);
     if (state.editMode) doc.body.classList.add('htmledit-mode-on');
 
@@ -302,6 +394,10 @@ body.htmledit-dragging * {
         window.htmleditDrag.disableDragForHost(host);
       });
       setHint('');
+      // 편집 모드 끄면 미니 툴바도 숨김
+      if (window.htmleditMiniToolbar) {
+        try { window.htmleditMiniToolbar.hide(); } catch (_) { /* ignore */ }
+      }
     }
     updateButtons();
   }
@@ -348,12 +444,30 @@ body.htmledit-dragging * {
     state.dirty = state.undoStack.length > 0;
     updateFileInfo();
     updateButtons();
+    // CRITICAL C3·C4: 메인 프로세스에 dirty 상태 전송
+    try {
+      const fileName = state.filePath ? state.filePath.split('/').pop() : null;
+      if (window.htmledit && typeof window.htmledit.setDirty === 'function') {
+        window.htmledit.setDirty(state.dirty, fileName);
+      }
+    } catch (e) {
+      console.warn('[editor] setDirty 실패:', e);
+    }
   }
 
   function clearHistory() {
     state.undoStack.length = 0;
     state.redoStack.length = 0;
     state.dirty = false;
+    // CRITICAL C3·C4: 메인 프로세스에 dirty 해제 알림
+    try {
+      const fileName = state.filePath ? state.filePath.split('/').pop() : null;
+      if (window.htmledit && typeof window.htmledit.setDirty === 'function') {
+        window.htmledit.setDirty(false, fileName);
+      }
+    } catch (e) {
+      console.warn('[editor] setDirty(clear) 실패:', e);
+    }
   }
 
   // ─── 파일 열기/저장 ─────────────────────────
@@ -361,6 +475,25 @@ body.htmledit-dragging * {
     if (!payload || !payload.html) {
       showToast('파일을 열 수 없어요.', 'error');
       return;
+    }
+
+    // CRITICAL C3·C4: dirty 가드 — 새 파일 열기 전 사용자 확인
+    if (state.dirty) {
+      try {
+        const fileName = state.filePath ? state.filePath.split('/').pop() : null;
+        const result = await window.htmledit.confirmClose(true, fileName);
+        if (!result || result.action === 'cancel') return;
+        if (result.action === 'save') {
+          await triggerSave();
+          // 저장 실패 → 진행 중단
+          if (state.dirty) return;
+        }
+        // 'discard'면 그대로 진행
+      } catch (e) {
+        // confirmClose 실패 시 안전하게 중단
+        showToast('확인 다이얼로그 실패: ' + (e.message || e), 'error');
+        return;
+      }
     }
 
     try {
@@ -383,7 +516,7 @@ body.htmledit-dragging * {
       updateButtons();
 
       if (payload.legacyEncodingWarn) {
-        showToast(`인코딩(${payload.encoding}) 추정. 저장 시 UTF-8로 변환됩니다. 원본은 .bak 백업에 안전.`);
+        showToast(`인코딩(${payload.encoding}) 추정. 저장 시 UTF-8로 변환됩니다. 원본은 백업에 안전.`);
       } else {
         const fileName = payload.path.split('/').pop();
         showToast(`'${fileName}' 열기 완료`, 'success');
@@ -405,6 +538,9 @@ body.htmledit-dragging * {
 
   async function triggerSave() {
     if (!state.filePath || !state.iframeDoc) return;
+    // H10: in-flight 가드
+    if (saving) return;
+    saving = true;
     try {
       const html = serializeForSave();
       const result = await window.htmledit.saveOriginal({
@@ -425,12 +561,23 @@ body.htmledit-dragging * {
         showToast(`저장 완료 · 백업: ${bakName}`, 'success');
       }
     } catch (e) {
-      showToast(e.message || '저장 실패', 'error');
+      // A-8: 인코딩 호환 에러는 명시 메시지 그대로 표시
+      const msg = e && e.message ? String(e.message) : '저장 실패';
+      if (msg.startsWith('ENCODING_INCOMPATIBLE')) {
+        showToast(msg, 'error');
+      } else {
+        showToast(msg || '저장 실패', 'error');
+      }
+    } finally {
+      saving = false;
     }
   }
 
   async function triggerSaveAs() {
     if (!state.filePath || !state.iframeDoc) return;
+    // H10: in-flight 가드
+    if (saving) return;
+    saving = true;
     try {
       const html = serializeForSave();
       const suggestedName = state.filePath.split('/').pop().replace(/\.html?$/i, '_edited.html');
@@ -452,8 +599,79 @@ body.htmledit-dragging * {
         showToast(`'${result.newPath.split('/').pop()}'로 저장됨`, 'success');
       }
     } catch (e) {
-      showToast(e.message || '저장 실패', 'error');
+      const msg = e && e.message ? String(e.message) : '저장 실패';
+      if (msg.startsWith('ENCODING_INCOMPATIBLE')) {
+        showToast(msg, 'error');
+      } else {
+        showToast(msg || '저장 실패', 'error');
+      }
+    } finally {
+      saving = false;
     }
+  }
+
+  // ─── 백업 복원 다이얼로그 (v0.5) ───────────
+  async function openRestoreBackupDialog() {
+    if (!state.filePath) {
+      showToast('파일을 먼저 여세요.', 'error');
+      return;
+    }
+    let backups;
+    try {
+      backups = await window.htmledit.listBackups(state.filePath);
+    } catch (e) {
+      showToast(e.message || '백업 목록을 불러올 수 없어요.', 'error');
+      return;
+    }
+    if (!Array.isArray(backups) || backups.length === 0) {
+      showToast('백업이 없습니다.', 'error');
+      return;
+    }
+    renderRestoreList(backups);
+    dom.restoreModal.hidden = false;
+  }
+
+  function closeRestoreModal() {
+    dom.restoreModal.hidden = true;
+    dom.restoreList.innerHTML = '';
+  }
+
+  function renderRestoreList(backups) {
+    dom.restoreList.innerHTML = '';
+    backups.forEach(b => {
+      const li = document.createElement('li');
+      const labelDiv = document.createElement('div');
+      labelDiv.className = 'restore-label';
+      labelDiv.textContent = b.label || (b.path ? b.path.split('/').pop() : '백업');
+      const metaDiv = document.createElement('div');
+      metaDiv.className = 'restore-meta';
+      const mtime = b.mtime ? new Date(b.mtime).toLocaleString('ko-KR') : '';
+      const sizeKb = typeof b.size === 'number' ? (b.size / 1024).toFixed(1) + ' KB' : '';
+      metaDiv.textContent = [mtime, sizeKb].filter(Boolean).join(' · ');
+      li.appendChild(labelDiv);
+      li.appendChild(metaDiv);
+      li.addEventListener('click', async () => {
+        const ok = window.confirm(
+          `이 백업으로 되돌리시겠어요?\n\n${labelDiv.textContent}\n${metaDiv.textContent}\n\n현재 작업은 새 백업으로 저장됩니다.`
+        );
+        if (!ok) return;
+        try {
+          const result = await window.htmledit.restoreBackup(b.path, state.filePath);
+          if (result && result.success) {
+            closeRestoreModal();
+            // 복원 후 다시 로드
+            const loaded = await window.htmledit.loadFile(state.filePath);
+            // dirty 강제 해제 (방금 복원했으므로)
+            state.dirty = false;
+            await applyLoadedFile(loaded);
+            showToast('백업으로 되돌렸어요.', 'success');
+          }
+        } catch (e) {
+          showToast(e.message || '복원 실패', 'error');
+        }
+      });
+      dom.restoreList.appendChild(li);
+    });
   }
 
   // ─── 드래그앤드롭 ───────────────────────────
@@ -507,14 +725,49 @@ body.htmledit-dragging * {
     document.addEventListener('keydown', (e) => {
       const meta = e.metaKey || e.ctrlKey;
       if (!meta) return;
-      if (e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
-      else if ((e.key === 'Z' && e.shiftKey) || (e.key === 'z' && e.shiftKey)) { e.preventDefault(); redo(); }
+
+      // Undo/Redo
+      if (e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); return; }
+      if ((e.key === 'Z' && e.shiftKey) || (e.key === 'z' && e.shiftKey)) {
+        e.preventDefault(); redo(); return;
+      }
+
+      // UX HIGH H3: ⌘⇧E → 편집 모드 토글 (옛 ⌘E에서 이동)
+      if (e.shiftKey && (e.key === 'E' || e.key === 'e')) {
+        // IME 가드
+        if (e.isComposing) return;
+        e.preventDefault();
+        setEditMode(!state.editMode);
+      }
     }, true);
   }
 
-  // 키보드 단축키: iframe 측 (포커스가 iframe 안에 있을 때)
+  // ─── 키보드 단축키: iframe 측 ───────────────
+  // 폰트 크기 단계 증감 (⌘⇧> / ⌘⇧< 처리용)
+  const FONT_SIZE_STOPS = [8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 28, 32, 36, 40, 48, 54, 60, 72, 80, 96];
+
+  function adjustFontSize(doc, delta) {
+    if (!doc || !window.htmleditFormat) return;
+    const formats = window.htmleditFormat.getActiveFormats(doc) || {};
+    let current = parseInt(formats.fontSize, 10) || 16;
+    let idx = FONT_SIZE_STOPS.findIndex(v => v >= current);
+    if (idx < 0) idx = FONT_SIZE_STOPS.length - 1;
+    if (delta > 0) idx = Math.min(idx + 1, FONT_SIZE_STOPS.length - 1);
+    else idx = Math.max(idx - 1, 0);
+    const next = FONT_SIZE_STOPS[idx];
+    window.htmleditFormat.setFontSize(doc, next);
+    markDirty();
+  }
+
   function bindIframeKeyboard(doc) {
     doc.addEventListener('keydown', (e) => {
+      // UX HIGH H5: Alt 키 시각 신호
+      if (e.key === 'Alt' || e.altKey) {
+        if (window.htmleditDrag && window.htmleditDrag.setAltVisualSignal) {
+          window.htmleditDrag.setAltVisualSignal(doc, true);
+        }
+      }
+
       // 슬라이드 자체 ArrowKey 핸들러로부터 contentEditable 보호
       if (state.editMode && e.target && e.target.isContentEditable) {
         const navKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' ', 'Home', 'End', 'PageUp', 'PageDown'];
@@ -524,13 +777,198 @@ body.htmledit-dragging * {
       const meta = e.metaKey || e.ctrlKey;
       if (!meta) return;
 
-      if (e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
-      else if ((e.key === 'Z' && e.shiftKey) || (e.key === 'z' && e.shiftKey)) { e.preventDefault(); redo(); }
-      else if (e.key === 's' && !e.shiftKey) { e.preventDefault(); triggerSave(); }
-      else if (e.key === 'S' || (e.key === 's' && e.shiftKey)) { e.preventDefault(); triggerSaveAs(); }
-      else if (e.key === 'o') { e.preventDefault(); triggerOpen(); }
-      else if (e.key === 'e' || e.key === 'E') { e.preventDefault(); setEditMode(!state.editMode); }
+      // ⌘Z / ⌘⇧Z 는 iframe 안에서는 가로채지 않고 브라우저 contentEditable 기본 undo에 위임.
+      // 그래야 execCommand로 적용된 모든 서식 변경(굵게/색/정렬 등)이 자연스럽게 복원된다.
+      // 우리 자체 undo 스택(드래그 이동 등)은 셸 측 setupKeyboard에서 처리.
+
+      if (e.key === 's' && !e.shiftKey) { e.preventDefault(); triggerSave(); return; }
+      if (e.key === 'S' || (e.key === 's' && e.shiftKey)) { e.preventDefault(); triggerSaveAs(); return; }
+      if (e.key === 'o') { e.preventDefault(); triggerOpen(); return; }
+
+      // 폰트 크기 단축키 (Word/PPT 표준)
+      // ⌘⇧> (또는 ⌘⇧.) — 키우기 / ⌘⇧< (또는 ⌘⇧,) — 작게
+      if (e.shiftKey && (e.key === '>' || e.key === '.')) {
+        e.preventDefault();
+        adjustFontSize(doc, +2);
+        return;
+      }
+      if (e.shiftKey && (e.key === '<' || e.key === ',')) {
+        e.preventDefault();
+        adjustFontSize(doc, -2);
+        return;
+      }
+
+      // UX HIGH H3: ⌘⇧E → 편집 모드 토글
+      // (⌘E 단독은 text-format.js가 alignCenter로 처리)
+      if (e.shiftKey && (e.key === 'E' || e.key === 'e')) {
+        if (e.isComposing) return;
+        e.preventDefault();
+        setEditMode(!state.editMode);
+      }
     }, true);
+
+    doc.addEventListener('keyup', (e) => {
+      // Alt 키 떨어지면 시각 신호 해제
+      if (e.key === 'Alt' || !e.altKey) {
+        if (window.htmleditDrag && window.htmleditDrag.setAltVisualSignal) {
+          window.htmleditDrag.setAltVisualSignal(doc, false);
+        }
+      }
+    }, true);
+
+    // window blur 시 Alt 상태 해제 (사용자가 다른 앱으로 가도 안전)
+    if (doc.defaultView) {
+      doc.defaultView.addEventListener('blur', () => {
+        if (window.htmleditDrag && window.htmleditDrag.setAltVisualSignal) {
+          window.htmleditDrag.setAltVisualSignal(doc, false);
+        }
+      });
+    }
+  }
+
+  // ─── 상단 서브툴바 이벤트 (v0.5) ───────────
+  function setupFormatBar() {
+    if (!dom.formatBar) return;
+    dom.formatBar.addEventListener('input', handleFormatBar);
+    dom.formatBar.addEventListener('click', handleFormatBar);
+  }
+
+  function handleFormatBar(e) {
+    const t = e.target.closest('[data-format-cmd]');
+    if (!t) return;
+    const cmd = t.dataset.formatCmd;
+    const doc = state.iframeDoc;
+    if (!doc || !window.htmleditFormat) return;
+    const fmt = window.htmleditFormat;
+    const value = t.value;
+
+    switch (cmd) {
+      case 'bold': fmt.bold(doc); break;
+      case 'italic': fmt.italic(doc); break;
+      case 'underline': fmt.underline(doc); break;
+      case 'strikethrough': fmt.strikethrough(doc); break;
+      case 'superscript': fmt.superscript(doc); break;
+      case 'subscript': fmt.subscript(doc); break;
+      case 'fontFamily': fmt.setFontFamily(doc, value); break;
+      case 'fontSize': fmt.setFontSize(doc, parseInt(value, 10)); break;
+      case 'foreColor': {
+        fmt.setForeColor(doc, value);
+        // 색 막대 시각 업데이트 (PPT 스타일)
+        const pick = t.closest('.fmt-color-pick');
+        if (pick) pick.style.setProperty('--current-color', value);
+        break;
+      }
+      case 'alignLeft': fmt.alignLeft(doc); break;
+      case 'alignCenter': fmt.alignCenter(doc); break;
+      case 'alignRight': fmt.alignRight(doc); break;
+      case 'alignJustify': fmt.alignJustify(doc); break;
+      case 'alignToggle': {
+        const s = fmt.getActiveFormats(doc).textAlign;
+        const next = { left: 'center', center: 'right', right: 'left', justify: 'left' }[s] || 'left';
+        if (next === 'center') fmt.alignCenter(doc);
+        else if (next === 'right') fmt.alignRight(doc);
+        else fmt.alignLeft(doc);
+        break;
+      }
+      case 'insertUnorderedList': fmt.insertUnorderedList(doc); break;
+      case 'insertOrderedList': fmt.insertOrderedList(doc); break;
+      case 'indent': fmt.indent(doc); break;
+      case 'outdent': fmt.outdent(doc); break;
+      case 'removeFormat': fmt.removeFormat(doc); break;
+      case 'hiliteColor': {
+        // 색 picker로 형광펜 색 적용
+        fmt.setHiliteColor(doc, value);
+        const pick = t.closest('.fmt-color-pick');
+        if (pick) pick.style.setProperty('--current-color', value);
+        break;
+      }
+      default:
+        return;
+    }
+    markDirty();
+  }
+
+  // ─── 메뉴 → 서식 액션 dispatch ─────────────
+  function handleMenuAction(action) {
+    if (action === 'open') { triggerOpen(); return; }
+    if (action === 'save') { triggerSave(); return; }
+    if (action === 'saveAs') { triggerSaveAs(); return; }
+    if (action === 'toggleEdit') { setEditMode(!state.editMode); return; }
+
+    // v0.5 신규
+    if (action === 'find') {
+      window.htmleditFindReplace && window.htmleditFindReplace.openFindBar();
+      return;
+    }
+    if (action === 'findNext') {
+      window.htmleditFindReplace && window.htmleditFindReplace.goToNext();
+      return;
+    }
+    if (action === 'findPrev') {
+      window.htmleditFindReplace && window.htmleditFindReplace.goToPrev();
+      return;
+    }
+    if (action === 'replace') {
+      window.htmleditFindReplace && window.htmleditFindReplace.openReplaceBar();
+      return;
+    }
+    if (action === 'restoreBackup') {
+      openRestoreBackupDialog();
+      return;
+    }
+    if (action === 'revealInFinder') {
+      if (state.filePath) window.htmledit.revealInFinder(state.filePath);
+      return;
+    }
+
+    if (typeof action === 'string' && action.startsWith('format:')) {
+      const cmd = action.slice(7);
+      const doc = state.iframeDoc;
+      const fmt = window.htmleditFormat;
+      if (!doc || !fmt) return;
+      const map = {
+        bold: () => fmt.bold(doc),
+        italic: () => fmt.italic(doc),
+        underline: () => fmt.underline(doc),
+        strikethrough: () => fmt.strikethrough(doc),
+        superscript: () => fmt.superscript(doc),
+        subscript: () => fmt.subscript(doc),
+        alignLeft: () => fmt.alignLeft(doc),
+        alignCenter: () => fmt.alignCenter(doc),
+        alignRight: () => fmt.alignRight(doc),
+        alignJustify: () => fmt.alignJustify(doc),
+        insertUnorderedList: () => fmt.insertUnorderedList(doc),
+        insertOrderedList: () => fmt.insertOrderedList(doc),
+        indent: () => fmt.indent(doc),
+        outdent: () => fmt.outdent(doc),
+        removeFormat: () => fmt.removeFormat(doc)
+      };
+      const fn = map[cmd];
+      if (fn) {
+        fn();
+        markDirty();
+      }
+      return;
+    }
+  }
+
+  // ─── 백업 복원 모달 wire-up ─────────────────
+  function setupRestoreModal() {
+    if (!dom.restoreModal) return;
+    if (dom.restoreCancel) {
+      dom.restoreCancel.addEventListener('click', closeRestoreModal);
+    }
+    // 배경 클릭으로 닫기
+    const backdrop = dom.restoreModal.querySelector('.modal-backdrop');
+    if (backdrop) {
+      backdrop.addEventListener('click', closeRestoreModal);
+    }
+    // Esc로 닫기
+    document.addEventListener('keydown', (e) => {
+      if (!dom.restoreModal.hidden && e.key === 'Escape') {
+        closeRestoreModal();
+      }
+    });
   }
 
   // ─── 초기화 ────────────────────────────────
@@ -543,6 +981,16 @@ body.htmledit-dragging * {
         markDirty();
       }
     }));
+
+    // v0.5 신규 모듈 초기화
+    if (window.htmleditMiniToolbar && typeof window.htmleditMiniToolbar.init === 'function') {
+      window.htmleditMiniToolbar.init(document.body, () => state.iframeDoc, {
+        onCommandApplied: () => markDirty()
+      });
+    }
+    if (window.htmleditFindReplace && typeof window.htmleditFindReplace.init === 'function') {
+      window.htmleditFindReplace.init(document.body, () => state.iframeDoc);
+    }
 
     dom.btnOpen.addEventListener('click', triggerOpen);
     dom.btnEditToggle.addEventListener('click', () => setEditMode(!state.editMode));
@@ -562,13 +1010,10 @@ body.htmledit-dragging * {
 
     setupDropZone();
     setupKeyboard();
+    setupFormatBar();
+    setupRestoreModal();
 
-    window.htmledit.onMenuAction((action) => {
-      if (action === 'open') triggerOpen();
-      else if (action === 'save') triggerSave();
-      else if (action === 'saveAs') triggerSaveAs();
-      else if (action === 'toggleEdit') setEditMode(!state.editMode);
-    });
+    window.htmledit.onMenuAction(handleMenuAction);
 
     window.htmledit.onFileFromOS(async (filePath) => {
       try {

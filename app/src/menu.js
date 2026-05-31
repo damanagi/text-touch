@@ -1,6 +1,19 @@
 const { Menu } = require('electron');
 
 function buildMenu(getWindow) {
+  // 헬퍼: menu-action 전송
+  const sendAction = (action) => () => {
+    const w = getWindow();
+    if (w) w.webContents.send('menu-action', action);
+  };
+
+  // 헬퍼: 서식 메뉴 항목 (label, accelerator, action)
+  const fmt = (label, accelerator, action) => ({
+    label,
+    accelerator,
+    click: sendAction(action)
+  });
+
   const template = [
     {
       label: 'Text Touch',
@@ -20,27 +33,27 @@ function buildMenu(getWindow) {
         {
           label: '열기...',
           accelerator: 'CmdOrCtrl+O',
-          click: () => {
-            const w = getWindow();
-            if (w) w.webContents.send('menu-action', 'open');
-          }
+          click: sendAction('open')
         },
         { type: 'separator' },
         {
           label: '저장',
           accelerator: 'CmdOrCtrl+S',
-          click: () => {
-            const w = getWindow();
-            if (w) w.webContents.send('menu-action', 'save');
-          }
+          click: sendAction('save')
         },
         {
           label: '다른 이름으로 저장...',
           accelerator: 'CmdOrCtrl+Shift+S',
-          click: () => {
-            const w = getWindow();
-            if (w) w.webContents.send('menu-action', 'saveAs');
-          }
+          click: sendAction('saveAs')
+        },
+        { type: 'separator' },
+        {
+          label: '백업으로 되돌리기...',
+          click: sendAction('restoreBackup')
+        },
+        {
+          label: 'Finder에서 보기',
+          click: sendAction('revealInFinder')
         },
         { type: 'separator' },
         { role: 'close', label: '윈도우 닫기' }
@@ -55,19 +68,61 @@ function buildMenu(getWindow) {
         { role: 'cut', label: '잘라내기' },
         { role: 'copy', label: '복사' },
         { role: 'paste', label: '붙여넣기' },
-        { role: 'selectAll', label: '모두 선택' }
+        { role: 'selectAll', label: '모두 선택' },
+        { type: 'separator' },
+        {
+          label: '찾기',
+          accelerator: 'CmdOrCtrl+F',
+          click: sendAction('find')
+        },
+        {
+          label: '바꾸기',
+          accelerator: 'CmdOrCtrl+Shift+H',
+          click: sendAction('replace')
+        },
+        {
+          label: '다음 찾기',
+          accelerator: 'CmdOrCtrl+G',
+          click: sendAction('findNext')
+        },
+        {
+          label: '이전 찾기',
+          accelerator: 'CmdOrCtrl+Shift+G',
+          click: sendAction('findPrev')
+        }
+      ]
+    },
+    {
+      label: '서식',
+      submenu: [
+        fmt('굵게', 'CmdOrCtrl+B', 'format:bold'),
+        fmt('기울임', 'CmdOrCtrl+I', 'format:italic'),
+        fmt('밑줄', 'CmdOrCtrl+U', 'format:underline'),
+        fmt('취소선', 'CmdOrCtrl+Shift+X', 'format:strikethrough'),
+        { type: 'separator' },
+        fmt('위첨자', 'CmdOrCtrl+Shift+=', 'format:superscript'),
+        fmt('아래첨자', 'CmdOrCtrl+=', 'format:subscript'),
+        { type: 'separator' },
+        fmt('왼쪽 정렬', 'CmdOrCtrl+L', 'format:alignLeft'),
+        fmt('가운데 정렬', 'CmdOrCtrl+E', 'format:alignCenter'),
+        fmt('오른쪽 정렬', 'CmdOrCtrl+R', 'format:alignRight'),
+        fmt('양쪽 정렬', 'CmdOrCtrl+J', 'format:alignJustify'),
+        { type: 'separator' },
+        fmt('글머리 기호', null, 'format:insertUnorderedList'),
+        fmt('번호 매기기', null, 'format:insertOrderedList'),
+        fmt('들여쓰기', 'CmdOrCtrl+]', 'format:indent'),
+        fmt('내어쓰기', 'CmdOrCtrl+[', 'format:outdent'),
+        { type: 'separator' },
+        fmt('서식 지우기', 'CmdOrCtrl+\\', 'format:removeFormat')
       ]
     },
     {
       label: '보기',
       submenu: [
         {
-          label: '편집 모드 토글',
-          accelerator: 'CmdOrCtrl+E',
-          click: () => {
-            const w = getWindow();
-            if (w) w.webContents.send('menu-action', 'toggleEdit');
-          }
+          label: '편집 모드 켜기/끄기',
+          accelerator: 'CmdOrCtrl+Shift+E',
+          click: sendAction('toggleEdit')
         },
         { type: 'separator' },
         { role: 'reload', label: '새로고침' },

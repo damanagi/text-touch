@@ -48,7 +48,7 @@ html, body {
   min-width: 0;
   text-align: center;
   font-size: 13px;
-  color: #98989d;
+  color: #b8b8be; /* UX HIGH H4: 5.1:1 대비 */
   padding: 0 16px;
   white-space: nowrap;
   overflow: hidden;
@@ -86,7 +86,7 @@ html, body {
 }
 
 #toolbar button:disabled {
-  opacity: 0.3;
+  opacity: 0.45; /* UX HIGH H4: 0.3 → 0.45 */
   cursor: not-allowed;
 }
 
@@ -102,16 +102,355 @@ html, body {
   color: #1c1c1e;
 }
 
+/* UX HIGH H6: 키보드 포커스 표시 강화 */
+#toolbar button:focus-visible,
+#format-bar button:focus-visible,
+#format-bar select:focus-visible,
+#format-bar input:focus-visible,
+#find-bar button:focus-visible,
+#find-bar input:focus-visible,
+#restore-modal button:focus-visible {
+  outline: 2px solid #0a84ff;
+  outline-offset: 2px;
+  border-color: transparent;
+}
+
+#toolbar button#btn-edit-toggle.active:focus-visible {
+  outline-color: #fff;
+}
+
+/* ─────────────── 상단 서식 툴바 (v0.5 — PowerPoint 홈 탭 라이트 테마) ─────────────── */
+#format-bar {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  padding: 4px 8px 0;
+  background: #f3f2f1;
+  border-bottom: 1px solid #d1d1d1;
+  font-size: 12px;
+  color: #252423;
+  z-index: 9998;
+  position: relative;
+  flex-wrap: wrap;
+}
+
+/* 편집 모드 OFF일 때 서브툴바는 보이되 시각적으로 약화 + 클릭 차단 */
+body:not(.htmledit-mode-on) #format-bar {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* 그룹 (PPT 리본의 그룹 패턴: 콘텐츠 + 하단 라벨 + 우측 구분선) */
+#format-bar .fmt-group {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 2px 8px 0;
+  border-right: 1px solid #d8d8d8;
+  position: relative;
+}
+
+#format-bar .fmt-group:last-child {
+  border-right: 0;
+}
+
+#format-bar .fmt-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 28px;
+  margin-bottom: 0;
+  flex-wrap: nowrap;
+}
+
+#format-bar .fmt-group-label {
+  font-size: 10px;
+  color: #6b6b6b;
+  text-align: center;
+  padding: 2px 0 4px;
+  letter-spacing: 0;
+  user-select: none;
+}
+
+/* select */
+#format-bar select {
+  background: #fff;
+  color: #252423;
+  border: 1px solid #c8c6c4;
+  border-radius: 2px;
+  padding: 3px 4px;
+  font-size: 12px;
+  font-family: inherit;
+  height: 24px;
+  cursor: pointer;
+}
+#format-bar select:hover {
+  border-color: #0a84ff;
+  background: #fafafa;
+}
+#format-bar select:focus {
+  border-color: #0a84ff;
+  outline: 0;
+}
+#format-bar #fmt-font-family { width: 130px; }
+#format-bar #fmt-font-size { width: 56px; }
+
+/* 버튼 — PPT 리본 스타일 */
+#format-bar .format-btn {
+  background: transparent;
+  color: #252423;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  padding: 0;
+  min-width: 26px;
+  height: 24px;
+  font-size: 13px;
+  font-family: inherit;
+  font-weight: 400;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: background-color 0.08s, border-color 0.08s;
+}
+
+#format-bar .format-btn:hover {
+  background: #e6e6e6;
+  border-color: #c8c6c4;
+}
+
+#format-bar .format-btn:active {
+  background: #d0d0d0;
+}
+
+/* 활성 토글 (선택된 서식 상태) */
+#format-bar .format-btn[aria-pressed="true"] {
+  background: #cde2ff;
+  border-color: #8ab4f5;
+  color: #1c1c1e;
+}
+
+#format-bar .format-btn[aria-pressed="true"]:hover {
+  background: #b9d5fb;
+}
+
+/* B/I/U/S 라벨 모양 */
+#format-bar .fmt-bold { font-weight: 800; font-family: 'Segoe UI', -apple-system, sans-serif; }
+#format-bar .fmt-italic { font-style: italic; font-family: 'Segoe UI', -apple-system, serif; font-weight: 600; }
+#format-bar .fmt-underline {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font-weight: 600;
+}
+#format-bar .fmt-strike { text-decoration: line-through; font-weight: 600; }
+#format-bar .fmt-sup { font-weight: 600; font-size: 11px; }
+#format-bar .fmt-sub { font-weight: 600; font-size: 11px; }
+
+/* 글자 색 픽커 — A + 검정 막대 */
+#format-bar .fmt-color-pick {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 24px;
+  padding: 1px 3px;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  cursor: pointer;
+  position: relative;
+  background: transparent;
+}
+#format-bar .fmt-color-pick:hover {
+  background: #e6e6e6;
+  border-color: #c8c6c4;
+}
+#format-bar .fmt-color-pick .fmt-color-label {
+  font-weight: 700;
+  font-size: 12px;
+  color: #252423;
+  line-height: 1;
+  margin-bottom: 1px;
+}
+#format-bar .fmt-color-pick .fmt-color-bar {
+  display: block;
+  width: 16px;
+  height: 3px;
+  background: var(--current-color, #000);
+  border-radius: 1px;
+}
+#format-bar .fmt-color-pick input[type="color"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  border: 0;
+  padding: 0;
+}
+
+/* 형광펜 픽커 — 글자색과 같은 패턴 + 노란 막대 기본값 */
+#format-bar .fmt-hilite-pick {
+  --current-color: #fff59d;
+}
+#format-bar .fmt-hilite-pick .fmt-hilite-icon {
+  font-size: 11px;
+  font-weight: 600;
+  font-style: italic;
+  font-family: 'Segoe UI', -apple-system, serif;
+}
+
+/* 서식 지우기 — 빨간 사선 */
+#format-bar .fmt-clear:hover {
+  background: #fde4e4;
+  border-color: #f5a6a6;
+}
+
+/* SVG 아이콘 색상 */
+#format-bar .format-btn svg {
+  display: block;
+}
+
+/* ─────────────── 미니 툴바 (선택 시 부동, v0.5) ─────────────── */
+#mini-toolbar {
+  position: fixed;
+  background: rgba(28, 28, 30, 0.96);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 4px 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  z-index: 99999;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  font-size: 12px;
+  color: #f5f5f7;
+  user-select: none;
+}
+
+#mini-toolbar[hidden] { display: none; }
+
+#mini-toolbar .sep {
+  width: 1px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+#mini-toolbar select,
+#mini-toolbar .format-btn {
+  background: transparent;
+  color: #f5f5f7;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 3px 7px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+#mini-toolbar select {
+  padding: 2px 4px;
+  max-width: 100px;
+}
+
+#mini-toolbar .format-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+#mini-toolbar .format-btn[aria-pressed="true"] {
+  background: #0a84ff;
+}
+
+#mini-toolbar input[type="color"] {
+  width: 22px;
+  height: 20px;
+  padding: 0;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: transparent;
+  border-radius: 3px;
+}
+
+/* ─────────────── 찾기·바꾸기 바 (v0.5) ─────────────── */
+#find-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 12px;
+  background: rgba(28, 28, 30, 0.96);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  position: relative;
+  z-index: 9997;
+  color: #f5f5f7;
+  font-size: 13px;
+}
+
+#find-bar[hidden] { display: none; }
+
+#find-bar .find-replace-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#find-bar input[type="text"],
+#find-bar input:not([type]) {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 5px;
+  padding: 4px 8px;
+  color: #f5f5f7;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+#find-bar button {
+  background: rgba(255, 255, 255, 0.04);
+  color: #f5f5f7;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 5px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: inherit;
+}
+
+#find-bar button:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+#find-count {
+  color: #c0c0c5;
+  font-size: 11px;
+}
+
+.htmledit-find-highlight {
+  background: rgba(255, 245, 157, 0.7);
+  color: #1c1c1e;
+  border-radius: 2px;
+}
+
+.htmledit-find-current {
+  background: rgba(255, 159, 10, 0.85);
+  color: #1c1c1e;
+  outline: 1px solid rgba(255, 159, 10, 1);
+}
+
 /* ─────────────── 힌트 바 ─────────────── */
 #hint-bar {
   height: 28px;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.55); /* UX HIGH H4: 더 진하게 */
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 11px;
-  color: #8e8e93;
+  color: #c0c0c5; /* UX HIGH H4: 5.1:1 */
   transition: opacity 0.2s;
   position: relative;
   z-index: 9999;
@@ -160,13 +499,13 @@ html, body {
 
 .empty-sub {
   font-size: 14px;
-  color: #98989d;
+  color: #c0c0c5; /* UX HIGH H4 */
   margin-bottom: 24px;
 }
 
 .empty-meta {
   font-size: 12px;
-  color: #636366;
+  color: #98989d; /* UX HIGH H4: 4.5:1 AA */
   max-width: 400px;
   line-height: 1.6;
 }
@@ -232,6 +571,106 @@ body.htmledit-dragging * {
   background: #ff9f0a;
   border-radius: 50%;
   pointer-events: none;
+}
+
+/* ─────────────── 백업 복원 모달 (v0.5) ─────────────── */
+#restore-modal[hidden] { display: none; }
+
+#restore-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#restore-modal .modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+}
+
+#restore-modal .modal-panel {
+  position: relative;
+  background: rgba(28, 28, 30, 0.98);
+  color: #f5f5f7;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 24px;
+  min-width: 440px;
+  max-width: 560px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+#restore-modal h3 {
+  font-size: 17px;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+#restore-modal p {
+  font-size: 13px;
+  color: #c0c0c5;
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+#restore-modal ul {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px;
+  max-height: 320px;
+  overflow: auto;
+}
+
+#restore-modal li {
+  padding: 10px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+}
+
+#restore-modal li:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+#restore-modal li .restore-label {
+  font-weight: 500;
+  color: #f5f5f7;
+}
+
+#restore-modal li .restore-meta {
+  font-size: 11px;
+  color: #98989d;
+}
+
+#restore-modal .modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+#restore-modal button {
+  background: transparent;
+  color: #f5f5f7;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 6px;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+#restore-modal button:hover {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 /* ─────────────── 토스트 ─────────────── */

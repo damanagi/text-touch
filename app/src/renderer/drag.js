@@ -107,6 +107,12 @@ window.htmleditDrag = (function () {
     host.classList.remove('htmledit-movable');
   }
 
+  // contracts §4: body.htmledit-alt-pressed — Alt 키 시각 신호 (UX HIGH H5)
+  function setAltVisualSignal(doc, on) {
+    if (!doc || !doc.body) return;
+    doc.body.classList.toggle('htmledit-alt-pressed', !!on);
+  }
+
   function init(callbacksFn) {
     getCallbacks = callbacksFn;
   }
@@ -116,6 +122,7 @@ window.htmleditDrag = (function () {
     isSlideStyle,
     isMovableTextBox,
     enableDragForHost,
-    disableDragForHost
+    disableDragForHost,
+    setAltVisualSignal
   };
 })();

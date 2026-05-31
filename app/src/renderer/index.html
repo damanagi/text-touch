@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval' data: blob: file: filesystem:; script-src * 'unsafe-inline' 'unsafe-eval' data: blob:; style-src * 'unsafe-inline' data: blob:; img-src * data: blob: file:; font-src * data: blob:; connect-src *;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' data: blob: file:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' data: https://fonts.googleapis.com https://cdn.jsdelivr.net; img-src * data: blob: file:; font-src * data: blob:; connect-src *; frame-src * data: blob:;">
   <title>Text Touch</title>
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -11,7 +11,7 @@
     <div class="toolbar-left">
       <button id="btn-open" title="파일 열기 (⌘O)">📂 열기</button>
       <span class="separator"></span>
-      <button id="btn-edit-toggle" title="편집 모드 토글 (⌘E)">✎ 편집 모드</button>
+      <button id="btn-edit-toggle" title="편집 모드 토글 (⌘⇧E)">✎ 편집 모드</button>
       <button id="btn-undo" title="실행 취소 (⌘Z)" disabled>↶</button>
       <button id="btn-redo" title="다시 하기 (⌘⇧Z)" disabled>↷</button>
     </div>
@@ -23,6 +23,90 @@
       <button id="btn-save-as" title="다른 이름으로 저장 (⌘⇧S)" disabled>다른 이름으로 저장</button>
     </div>
   </div>
+
+  <!-- v0.5: PowerPoint 홈 탭 스타일 상단 서식 툴바 -->
+  <div id="format-bar">
+    <!-- 글꼴 그룹 — 한 줄 -->
+    <div class="fmt-group">
+      <div class="fmt-row">
+        <select id="fmt-font-family" data-format-cmd="fontFamily" aria-label="글꼴" title="글꼴">
+          <option value="-apple-system">시스템</option>
+          <option value="Pretendard Variable, Pretendard, sans-serif">Pretendard</option>
+          <option value="Noto Sans KR, sans-serif">Noto Sans KR</option>
+          <option value="Apple SD Gothic Neo, sans-serif">애플 산돌고딕</option>
+          <option value="Nanum Gothic, sans-serif">나눔고딕</option>
+          <option value="Nanum Myeongjo, serif">나눔명조</option>
+          <option value="Times New Roman, serif">Times New Roman</option>
+          <option value="Georgia, serif">Georgia</option>
+          <option value="Helvetica, sans-serif">Helvetica</option>
+          <option value="Arial, sans-serif">Arial</option>
+          <option value="Menlo, monospace">Menlo</option>
+          <option value="Courier New, monospace">Courier New</option>
+        </select>
+        <select id="fmt-font-size" data-format-cmd="fontSize" aria-label="크기" title="글꼴 크기">
+          <option>10</option><option>11</option><option>12</option><option>14</option>
+          <option>16</option><option>18</option><option>20</option><option>22</option>
+          <option>24</option><option>28</option><option>32</option><option>36</option>
+          <option>40</option><option>48</option><option>54</option><option>60</option>
+          <option>72</option>
+        </select>
+        <button class="format-btn fmt-bold" data-format-cmd="bold" title="굵게 ⌘B" aria-label="굵게" aria-pressed="false">B</button>
+        <button class="format-btn fmt-italic" data-format-cmd="italic" title="기울임 ⌘I" aria-label="기울임" aria-pressed="false">I</button>
+        <button class="format-btn fmt-underline" data-format-cmd="underline" title="밑줄 ⌘U" aria-label="밑줄" aria-pressed="false">U</button>
+        <button class="format-btn fmt-strike" data-format-cmd="strikethrough" title="취소선 ⌘⇧X" aria-label="취소선" aria-pressed="false">S</button>
+        <button class="format-btn fmt-sup" data-format-cmd="superscript" title="위첨자 ⌘⇧=" aria-label="위첨자" aria-pressed="false">X²</button>
+        <button class="format-btn fmt-sub" data-format-cmd="subscript" title="아래첨자 ⌘=" aria-label="아래첨자" aria-pressed="false">X₂</button>
+        <label class="fmt-color-pick" title="글자 색">
+          <span class="fmt-color-label">A</span>
+          <input type="color" data-format-cmd="foreColor" value="#000000" aria-label="글자 색" />
+          <span class="fmt-color-bar"></span>
+        </label>
+        <label class="fmt-color-pick fmt-hilite-pick" title="배경(형광펜) 색">
+          <span class="fmt-color-label fmt-hilite-icon">ab</span>
+          <input type="color" data-format-cmd="hiliteColor" value="#fff59d" aria-label="형광펜 색" />
+          <span class="fmt-color-bar"></span>
+        </label>
+      </div>
+      <div class="fmt-group-label">글꼴</div>
+    </div>
+
+    <!-- 단락 그룹 — 한 줄 -->
+    <div class="fmt-group">
+      <div class="fmt-row">
+        <button class="format-btn" data-format-cmd="insertUnorderedList" title="글머리 기호" aria-label="글머리 기호" aria-pressed="false">
+          <svg viewBox="0 0 16 16" width="14" height="14"><circle cx="2" cy="3.5" r="1.2" fill="currentColor"/><rect x="5" y="3" width="9" height="1.4" rx="0.7" fill="currentColor"/><circle cx="2" cy="8" r="1.2" fill="currentColor"/><rect x="5" y="7.3" width="9" height="1.4" rx="0.7" fill="currentColor"/><circle cx="2" cy="12.5" r="1.2" fill="currentColor"/><rect x="5" y="11.8" width="9" height="1.4" rx="0.7" fill="currentColor"/></svg>
+        </button>
+        <button class="format-btn" data-format-cmd="insertOrderedList" title="번호 매기기" aria-label="번호 매기기" aria-pressed="false">
+          <svg viewBox="0 0 16 16" width="14" height="14"><text x="1" y="5" font-size="4.2" font-family="-apple-system,sans-serif" fill="currentColor" font-weight="600">1.</text><rect x="5" y="3" width="9" height="1.4" rx="0.7" fill="currentColor"/><text x="1" y="9.5" font-size="4.2" font-family="-apple-system,sans-serif" fill="currentColor" font-weight="600">2.</text><rect x="5" y="7.3" width="9" height="1.4" rx="0.7" fill="currentColor"/><text x="1" y="14" font-size="4.2" font-family="-apple-system,sans-serif" fill="currentColor" font-weight="600">3.</text><rect x="5" y="11.8" width="9" height="1.4" rx="0.7" fill="currentColor"/></svg>
+        </button>
+        <button class="format-btn" data-format-cmd="outdent" title="내어쓰기 ⌘[" aria-label="내어쓰기">
+          <svg viewBox="0 0 16 16" width="14" height="14"><rect x="1" y="2" width="14" height="1.4" rx="0.7" fill="currentColor"/><rect x="6" y="5" width="9" height="1.4" rx="0.7" fill="currentColor"/><rect x="1" y="8" width="14" height="1.4" rx="0.7" fill="currentColor"/><rect x="6" y="11" width="9" height="1.4" rx="0.7" fill="currentColor"/><polygon points="4,5 1,7 4,9" fill="currentColor"/></svg>
+        </button>
+        <button class="format-btn" data-format-cmd="indent" title="들여쓰기 ⌘]" aria-label="들여쓰기">
+          <svg viewBox="0 0 16 16" width="14" height="14"><rect x="1" y="2" width="14" height="1.4" rx="0.7" fill="currentColor"/><rect x="6" y="5" width="9" height="1.4" rx="0.7" fill="currentColor"/><rect x="1" y="8" width="14" height="1.4" rx="0.7" fill="currentColor"/><rect x="6" y="11" width="9" height="1.4" rx="0.7" fill="currentColor"/><polygon points="1,5 4,7 1,9" fill="currentColor"/></svg>
+        </button>
+        <button class="format-btn" data-format-cmd="alignLeft" title="왼쪽 정렬 ⌘L" aria-label="왼쪽 정렬" aria-pressed="false">
+          <svg viewBox="0 0 16 16" width="14" height="14"><rect x="1" y="2" width="14" height="1.4" rx="0.7" fill="currentColor"/><rect x="1" y="5" width="10" height="1.4" rx="0.7" fill="currentColor"/><rect x="1" y="8" width="14" height="1.4" rx="0.7" fill="currentColor"/><rect x="1" y="11" width="10" height="1.4" rx="0.7" fill="currentColor"/></svg>
+        </button>
+        <button class="format-btn" data-format-cmd="alignCenter" title="가운데 정렬 ⌘E" aria-label="가운데 정렬" aria-pressed="false">
+          <svg viewBox="0 0 16 16" width="14" height="14"><rect x="1" y="2" width="14" height="1.4" rx="0.7" fill="currentColor"/><rect x="3" y="5" width="10" height="1.4" rx="0.7" fill="currentColor"/><rect x="1" y="8" width="14" height="1.4" rx="0.7" fill="currentColor"/><rect x="3" y="11" width="10" height="1.4" rx="0.7" fill="currentColor"/></svg>
+        </button>
+        <button class="format-btn" data-format-cmd="alignRight" title="오른쪽 정렬 ⌘R" aria-label="오른쪽 정렬" aria-pressed="false">
+          <svg viewBox="0 0 16 16" width="14" height="14"><rect x="1" y="2" width="14" height="1.4" rx="0.7" fill="currentColor"/><rect x="5" y="5" width="10" height="1.4" rx="0.7" fill="currentColor"/><rect x="1" y="8" width="14" height="1.4" rx="0.7" fill="currentColor"/><rect x="5" y="11" width="10" height="1.4" rx="0.7" fill="currentColor"/></svg>
+        </button>
+        <button class="format-btn" data-format-cmd="alignJustify" title="양쪽 정렬 ⌘J" aria-label="양쪽 정렬" aria-pressed="false">
+          <svg viewBox="0 0 16 16" width="14" height="14"><rect x="1" y="2" width="14" height="1.4" rx="0.7" fill="currentColor"/><rect x="1" y="5" width="14" height="1.4" rx="0.7" fill="currentColor"/><rect x="1" y="8" width="14" height="1.4" rx="0.7" fill="currentColor"/><rect x="1" y="11" width="14" height="1.4" rx="0.7" fill="currentColor"/></svg>
+        </button>
+        <button class="format-btn fmt-clear" data-format-cmd="removeFormat" title="서식 지우기 ⌘\" aria-label="서식 지우기">
+          <svg viewBox="0 0 16 16" width="14" height="14"><text x="1" y="11" font-size="9" font-family="serif" font-style="italic" font-weight="700" fill="currentColor">A</text><line x1="1" y1="13" x2="11" y2="13" stroke="currentColor" stroke-width="1.4"/><line x1="9" y1="3" x2="14.5" y2="14.5" stroke="#d92020" stroke-width="1.4"/></svg>
+        </button>
+      </div>
+      <div class="fmt-group-label">단락</div>
+    </div>
+  </div>
+
+  <!-- v0.5: 찾기·바꾸기 바 — find-replace.js가 내부를 채움 -->
+  <div id="find-bar" hidden role="search" aria-label="찾기·바꾸기"></div>
 
   <div id="hint-bar">
     <span id="hint-text"></span>
@@ -40,8 +124,27 @@
     <iframe id="content-frame" hidden></iframe>
   </div>
 
+  <!-- v0.5: 미니 툴바 — mini-toolbar.js가 내부를 채움 -->
+  <div id="mini-toolbar" hidden role="toolbar" aria-label="텍스트 서식"></div>
+
+  <!-- v0.5: 백업 복원 모달 -->
+  <div id="restore-modal" hidden role="dialog" aria-modal="true" aria-labelledby="restore-modal-title">
+    <div class="modal-backdrop"></div>
+    <div class="modal-panel">
+      <h3 id="restore-modal-title">백업으로 되돌리기</h3>
+      <p>가장 최근 5개 백업 중에서 선택하세요. 현재 작업은 마지막 백업 이후로 다시 백업됩니다.</p>
+      <ul id="restore-list"></ul>
+      <div class="modal-actions">
+        <button id="restore-cancel">취소</button>
+      </div>
+    </div>
+  </div>
+
   <div id="toast" hidden></div>
 
+  <script src="text-format.js"></script>
+  <script src="find-replace.js"></script>
+  <script src="mini-toolbar.js"></script>
   <script src="drag.js"></script>
   <script src="editor.js"></script>
 </body>

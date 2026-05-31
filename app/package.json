@@ -1,6 +1,6 @@
 {
   "name": "text-touch",
-  "version": "0.1.0",
+  "version": "0.5.0",
   "description": "로컬 HTML 파일의 텍스트만 인라인으로 편집하는 데스크탑 앱 (macOS / Windows)",
   "main": "src/main.js",
   "author": "Kay",
@@ -32,7 +32,9 @@
       "target": [
         {
           "target": "dmg",
-          "arch": ["arm64"]
+          "arch": [
+            "arm64"
+          ]
         }
       ],
       "identity": null,
@@ -48,8 +50,17 @@
         "height": 380
       },
       "contents": [
-        { "x": 130, "y": 200, "type": "file" },
-        { "x": 410, "y": 200, "type": "link", "path": "/Applications" }
+        {
+          "x": 130,
+          "y": 200,
+          "type": "file"
+        },
+        {
+          "x": 410,
+          "y": 200,
+          "type": "link",
+          "path": "/Applications"
+        }
       ],
       "writeUpdateInfo": false
     },
@@ -58,7 +69,9 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "artifactName": "${productName}-${version}-win-${arch}.${ext}"
@@ -86,5 +99,8 @@
         "role": "Editor"
       }
     ]
+  },
+  "dependencies": {
+    "iconv-lite": "^0.7.2"
   }
 }
